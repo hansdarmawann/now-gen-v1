@@ -1,0 +1,23 @@
+{
+    "Date in Local Time": "2025-10-19 14:12:02 SE Asia Standard Time",
+    "Date in UTC": "2025-10-19 07:12:02+00:00",
+    "ISO 8601": "2025-10-19T07:12:02.732560Z",
+    "UNIX Timestamp": 1760857922,
+    "UNIX Timestamp (Milliseconds)": 1760857922732,
+    "Week Number (00-53)": "41",
+    "RFC 2822": "Sun, 19 Oct 2025 14:12:02 +0700",
+    "RFC 3339": "2025-10-19T07:12:02.732560Z",
+    "Julian Day": 2460967.8000231483,
+    "Excel DATEVALUE": 45950.59169829279,
+    "UUID v1": "e95957a1-acba-11f0-aa23-0468742d9526",
+    "UUID v2": "N/A: Requires user/group ID for generation (specialized)",
+    "UUID v3": "N/A: Requires Namespace UUID and a Name for generation",
+    "UUID v4": "c9e7a344-f088-464b-a6f4-a5f13e7fb21c",
+    "UUID v5": "N/A: Requires Namespace UUID and a Name for generation",
+    "UUID v7": "UUID7_LIBRARY_MISSING",
+    "UUID Decoder": "N/A: Requires an existing UUID to decode",
+    "Cuid": "N/A: Use Cuid2 (older library, typically uses JavaScript logic)",
+    "Cuid2": "CUID2_LIBRARY_MISSING",
+    "ULID": "ULID_LIBRARY_MISSING",
+    "Nano ID": "NANOID_LIBRARY_MISSING"
+}
