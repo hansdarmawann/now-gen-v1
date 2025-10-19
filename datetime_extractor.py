@@ -139,11 +139,16 @@ def extract_datetime_info() -> Dict[str, Any]:
 
 def main():
     """Main function to run the extraction and save to JSON."""
+    # The first thing we do is get the time, as this drives the output data AND the filename
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    timestamp_int = int(now_utc.timestamp())
+    
     data = extract_datetime_info()
     
     # Folder and file path setup
     output_dir = "output"
-    output_filename = "nowgen.json"
+    # New dynamic filename format
+    output_filename = f"nowgen_{timestamp_int}.json"
     output_path = os.path.join(output_dir, output_filename)
 
     # Create the output directory if it doesn't exist
