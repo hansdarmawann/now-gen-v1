@@ -118,11 +118,11 @@ def get_julian_day(dt_utc: dt.datetime) -> float:
     return jd
 
 
-def get_excel_date_value(dt_local: dt.datetime) -> float:
-    """Return Excel serial date (Windows 1900 date system)."""
+def get_excel_date_value(dt_local: dt.datetime) -> int:
+    """Return Excel serial date (Windows 1900 date system), integer only."""
     excel_epoch = dt.datetime(1899, 12, 30, tzinfo=dt_local.tzinfo)
     delta = dt_local - excel_epoch
-    return delta.total_seconds() / 86400.0
+    return int(delta.total_seconds() // 86400)
 
 
 def extract_datetime_info(tz: Optional[str]) -> Dict[str, Any]:
@@ -134,18 +134,21 @@ def extract_datetime_info(tz: Optional[str]) -> Dict[str, Any]:
     iso_cal = now_local.isocalendar()
     yday = now_local.timetuple().tm_yday
 
+    # Platform portability: %-I works on Linux/Mac, %#I on Windows
+    hour_fmt = "%-I" if os.name != "nt" else "%#I"
+
     return {
         "time_formats": {
-            "Date in Local Time": now_local.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "Date in UTC": now_utc.strftime("%Y-%m-%d %H:%M:%S+00:00"),
-            "ISO 8601": now_utc.isoformat().replace("+00:00", "Z"),
+            "Date in Local Time": now_local.strftime(f"%B %d, %Y {hour_fmt}:%M %p"),
+            "Date in UTC": now_utc.strftime(f"%B %d, %Y {hour_fmt}:%M %p"),
+            "ISO 8601": now_local.isoformat(timespec="seconds"),
             "RFC 2822": now_local.strftime("%a, %d %b %Y %H:%M:%S %z"),
-            "RFC 3339": now_utc.isoformat().replace("+00:00", "Z"),
+            "RFC 3339": now_local.isoformat(timespec="seconds"),
             "Timezone Name": now_local.tzname(),
             "Timezone Offset": now_local.strftime("%z"),
-            "Week Number (00-53)": now_local.strftime("%W"),
-            "ISO Week (YYYY-Www)": f"{iso_cal.year}-W{iso_cal.week:02d}",
-            "Day of Year (001-366)": f"{yday:03d}",
+            "Week Number": now_local.strftime("%W"),
+            "ISO Week": f"{iso_cal.year}-W{iso_cal.week:02d}",
+            "Day of Year": f"{yday:03d}",
         },
         "epochs": {
             "UNIX Timestamp": int(ts_s),
