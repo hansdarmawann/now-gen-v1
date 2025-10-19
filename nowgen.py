@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+nowgen: Datetime Extractor and Unique ID Generator
+
+Generates a JSON snapshot of the current time in multiple formats
+and various unique identifiers (UUID, ULID, Nano ID).
+"""
+
 import argparse
 import datetime as dt
 import json
@@ -7,12 +14,12 @@ import os
 import sys
 import traceback
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 # -----------------------------
 # Optional dependency handling
 # -----------------------------
-MISSING: list[str] = []
+MISSING: List[str] = []
 
 # ulid
 try:
@@ -21,9 +28,13 @@ try:
 except Exception:
     _ULID_OK = False
     MISSING.append("ulid-py")
+
     class _UlidPlaceholder:
+        """Fallback ULID generator when library is missing."""
         @staticmethod
-        def new(): return "ULID_LIBRARY_MISSING"
+        def new():
+            return "ULID_LIBRARY_MISSING"
+
     ulid = _UlidPlaceholder()  # type: ignore
 
 # nanoid
@@ -33,9 +44,13 @@ try:
 except Exception:
     _NANOID_OK = False
     MISSING.append("nanoid")
+
     class _NanoidPlaceholder:
+        """Fallback Nano ID generator when library is missing."""
         @staticmethod
-        def generate(size: int = 21): return "NANOID_LIBRARY_MISSING"
+        def generate(size: int = 21):
+            return "NANOID_LIBRARY_MISSING"
+
     nanoid = _NanoidPlaceholder()  # type: ignore
 
 # uuid7 availability (stdlib in Python 3.13+); fallback to uuid6 package
@@ -44,14 +59,20 @@ if not _UUID7_AVAILABLE:
     try:
         import uuid6  # type: ignore
         _UUID7_AVAILABLE = True
+
         def _uuid7():
+            """Return a UUIDv7 using uuid6 package."""
             return uuid6.uuid7()  # type: ignore[attr-defined]
+
     except Exception:
         MISSING.append("uuid6 (for uuid7 on Python < 3.13)")
+
         def _uuid7():
             return "UUID7_LIBRARY_MISSING"
 else:
+
     def _uuid7():
+        """Return a UUIDv7 using stdlib (Python 3.13+)."""
         return uuid.uuid7()  # type: ignore[attr-defined]
 
 # -----------------------------
@@ -73,8 +94,9 @@ def maybe_localize(now_utc: dt.datetime, tz: Optional[str]) -> dt.datetime:
             pass  # fallback below
     return now_utc.astimezone()
 
+
 def get_julian_day(dt_utc: dt.datetime) -> float:
-    """Julian Day (JD) for a UTC datetime, fractional day included."""
+    """Return Julian Day (JD) for a UTC datetime with fractional day."""
     y = dt_utc.year
     m = dt_utc.month
     d = dt_utc.day
@@ -95,14 +117,16 @@ def get_julian_day(dt_utc: dt.datetime) -> float:
           + d + day_fraction + B - 1524.5)
     return jd
 
+
 def get_excel_date_value(dt_local: dt.datetime) -> float:
-    """Excel serial date (Windows 1900 date system)."""
+    """Return Excel serial date (Windows 1900 date system)."""
     excel_epoch = dt.datetime(1899, 12, 30, tzinfo=dt_local.tzinfo)
     delta = dt_local - excel_epoch
     return delta.total_seconds() / 86400.0
 
+
 def extract_datetime_info(tz: Optional[str]) -> Dict[str, Any]:
-    """Extract various time formats and unique IDs, grouped by category."""
+    """Extract current datetime info and identifiers, grouped by category."""
     now_utc = dt.datetime.now(dt.timezone.utc)
     now_local = maybe_localize(now_utc, tz)
     ts_s = now_utc.timestamp()
@@ -121,16 +145,16 @@ def extract_datetime_info(tz: Optional[str]) -> Dict[str, Any]:
             "Timezone Offset": now_local.strftime("%z"),
             "Week Number (00-53)": now_local.strftime("%W"),
             "ISO Week (YYYY-Www)": f"{iso_cal.year}-W{iso_cal.week:02d}",
-            "Day of Year (001-366)": f"{yday:03d}"
+            "Day of Year (001-366)": f"{yday:03d}",
         },
         "epochs": {
             "UNIX Timestamp": int(ts_s),
             "UNIX Timestamp (Milliseconds)": int(ts_s * 1000),
-            "UNIX Timestamp (Microseconds)": int(ts_s * 1_000_000)
+            "UNIX Timestamp (Microseconds)": int(ts_s * 1_000_000),
         },
         "calendars": {
             "Julian Day": get_julian_day(now_utc),
-            "Excel DATEVALUE": get_excel_date_value(now_local)
+            "Excel DATEVALUE": get_excel_date_value(now_local),
         },
         "identifiers": {
             "uuid": {
@@ -138,17 +162,21 @@ def extract_datetime_info(tz: Optional[str]) -> Dict[str, Any]:
                 "v3": str(uuid.uuid3(NAMESPACE_PROJECT, NAME_STRING)),
                 "v4": str(uuid.uuid4()),
                 "v5": str(uuid.uuid5(NAMESPACE_PROJECT, NAME_STRING)),
-                "v7": str(_uuid7())
+                "v7": str(_uuid7()),
             },
             "ulid": str(ulid.new()),
             "nanoid": (
-                nanoid.generate() if hasattr(nanoid, "generate")
+                nanoid.generate()
+                if hasattr(nanoid, "generate")
                 else "NANOID_LIBRARY_MISSING"
-            )
-        }
+            ),
+        },
     }
 
-def write_json(obj: Dict[str, Any], out_dir: str, filename: Optional[str]) -> str:
+
+def write_json(obj: Dict[str, Any], out_dir: str,
+               filename: Optional[str]) -> str:
+    """Write the collected data to a JSON file."""
     os.makedirs(out_dir, exist_ok=True)
     if not filename:
         epoch = int(dt.datetime.now(dt.timezone.utc).timestamp())
@@ -158,7 +186,9 @@ def write_json(obj: Dict[str, Any], out_dir: str, filename: Optional[str]) -> st
         json.dump(obj, f, indent=4, ensure_ascii=False, sort_keys=True)
     return path
 
+
 def log_error(exc: Exception, ts_int: int) -> str:
+    """Write error traceback to a log file and return its path."""
     log_dir = "log"
     os.makedirs(log_dir, exist_ok=True)
     path = os.path.join(log_dir, f"error_{ts_int}.log")
@@ -169,17 +199,28 @@ def log_error(exc: Exception, ts_int: int) -> str:
         traceback.print_exc(file=f)
     return path
 
+
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        description="Generate a JSON file with current time formats and assorted IDs."
+    """Parse command-line arguments for the script."""
+    parser = argparse.ArgumentParser(
+        description="Generate a JSON file with current time formats "
+                    "and assorted IDs."
     )
-    p.add_argument("--out-dir", default="output", help="Directory to save JSON (default: output)")
-    p.add_argument("--filename", default=None, help="Optional JSON filename (default: nowgen_<epoch>.json)")
-    p.add_argument("--tz", default=None, help="IANA timezone name (e.g., Asia/Jakarta). Defaults to system local.")
-    p.add_argument("--quiet", action="store_true", help="Suppress extra info messages")
-    return p.parse_args()
+    parser.add_argument("--out-dir", default="output",
+                        help="Directory to save JSON (default: output)")
+    parser.add_argument("--filename", default=None,
+                        help="Optional JSON filename "
+                             "(default: nowgen_[timestamp].json)")
+    parser.add_argument("--tz", default=None,
+                        help="IANA timezone name (e.g., Asia/Jakarta). "
+                             "Defaults to system local.")
+    parser.add_argument("--quiet", action="store_true",
+                        help="Suppress extra info messages")
+    return parser.parse_args()
+
 
 def main() -> int:
+    """Main entry point for the script."""
     args = parse_args()
     now_utc = dt.datetime.now(dt.timezone.utc)
     ts_int = int(now_utc.timestamp())
@@ -197,6 +238,7 @@ def main() -> int:
         path = log_error(e, ts_int)
         print(f"\nFATAL ERROR: Execution failed. Traceback saved to {path}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
